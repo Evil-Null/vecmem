@@ -9,7 +9,38 @@
 
 > Your notes become AI's memory
 
-A CLI tool and MCP server that transforms `.md` files into a hybrid AI memory system with semantic vector search, full-text search, and instant retrieval.
+You have markdown notes scattered across folders. You know the answer is *somewhere* in there, but where?
+
+**vecmem** indexes your `.md` files and lets you (or your AI assistant) search them instantly — not just by keywords, but by meaning.
+
+## The Problem
+
+```
+You: "How did we set up authentication?"
+AI:  "I don't have access to your notes."
+
+You: *manually searches 50 files*
+You: *finds it 10 minutes later in docs/auth/oauth.md*
+```
+
+## The Solution
+
+```bash
+vecmem index ./docs                        # One-time: index your notes
+vecmem query "how did we set up auth?"     # Instant: finds it in 100ms
+```
+
+```
+Found 5 results (87ms)
+
+┌─ docs/auth/oauth.md ─── score: 0.94 ────────────┐
+│ ## OAuth 2.0 Flow                                 │
+│ Authentication uses OAuth 2.0 with PKCE.          │
+│ The flow starts with a redirect to /auth/login... │
+└───────────────────────────────────────────────────┘
+```
+
+It finds `oauth.md` even though you searched "auth" — because it understands meaning, not just words.
 
 ## Install
 
@@ -20,47 +51,17 @@ npm install -g vecmem
 ## Quick Start
 
 ```bash
-vecmem init                              # Auto-discover .md files
-vecmem index                             # Index → chunks → embeddings
-vecmem query "how does auth work?"       # Hybrid search (BM25 + vector)
-vecmem status                            # Stats and health
-vecmem doctor                            # System health check
+vecmem init                              # Find all .md files in your project
+vecmem index                             # Index them (takes a few seconds)
+vecmem query "database schema"           # Search by meaning
+vecmem status                            # See what's indexed
 ```
 
-## What It Does
+## Works With AI Assistants
 
-You write notes in `.md` files. vecmem automatically:
+vecmem is an [MCP server](https://modelcontextprotocol.io/) — AI assistants can use it directly:
 
-- **Parses** markdown into semantic chunks (heading-aware, code-block-safe)
-- **Embeds** chunks locally using transformer models (no API keys, works offline)
-- **Stores** everything in a single SQLite database (metadata + FTS5 + vector embeddings)
-- **Searches** using hybrid BM25 + vector similarity + Reciprocal Rank Fusion
-- **Serves** results via MCP protocol to any AI client (Claude CLI, Cursor, Copilot, Windsurf)
-
-## CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `vecmem init` | Initialize project, auto-discover .md files |
-| `vecmem index [path]` | Index markdown files (incremental, skips unchanged) |
-| `vecmem query "..."` | Hybrid search — BM25 + vector + RRF |
-| `vecmem status` | Document count, chunks, DB size, stale files |
-| `vecmem doctor` | Health check — DB, FTS sync, invariants, model |
-| `vecmem remove <path>` | Remove a document from the index |
-
-## MCP Server
-
-Works with any MCP-compatible AI client:
-
-```bash
-vecmem --mcp    # Start stdio MCP server
-```
-
-7 tools: `search_memory`, `index_files`, `get_document`, `get_chunks`, `list_documents`, `remove_document`, `status`
-
-### Claude CLI Setup
-
-Add to `.mcp.json` in your project:
+**Claude CLI** — add to `.mcp.json` in your project:
 
 ```json
 {
@@ -73,7 +74,73 @@ Add to `.mcp.json` in your project:
 }
 ```
 
-## Architecture
+Also works with **Cursor**, **VS Code Copilot**, **Windsurf**, and any MCP-compatible client.
+
+Once connected, your AI can search your notes automatically:
+
+```
+You: "What do we know about the deployment process?"
+AI:  *searches vecmem* → finds 3 relevant notes → gives you the answer
+```
+
+## How It Works
+
+```
+Your .md files
+      │
+      ▼
+   vecmem index
+      │
+      ├── Reads and splits into sections (heading-aware)
+      ├── Converts each section into a vector (meaning)
+      └── Stores in local SQLite database
+
+   vecmem query "..."
+      │
+      ├── Keyword search (exact matches)
+      ├── Meaning search (similar concepts)
+      └── Combines both → best results first
+```
+
+**Everything runs locally.** No API keys, no cloud, no data leaves your machine.
+
+## All Commands
+
+| Command | What it does |
+|---------|-------------|
+| `vecmem init` | Find .md files and set up database |
+| `vecmem index [path]` | Index files (only re-indexes changed ones) |
+| `vecmem query "..."` | Search your notes |
+| `vecmem status` | How many files/sections are indexed |
+| `vecmem doctor` | Check everything is healthy |
+| `vecmem remove <path>` | Remove a file from the index |
+
+## FAQ
+
+**How is this different from grep?**
+grep finds exact words. vecmem finds related concepts. Search "auth" and it finds documents about "login", "OAuth", "session management".
+
+**Does it need an internet connection?**
+Only once — to download the search model (23 MB). After that, everything works offline.
+
+**How fast is it?**
+Search takes ~100ms across hundreds of files. Indexing processes ~30 files/sec.
+
+**What files does it support?**
+Markdown (`.md`) files only. It understands headings, code blocks, and frontmatter.
+
+**Where is my data stored?**
+In `~/.vector/vector.db` — a single file on your machine. Delete it anytime.
+
+**Does it work with languages other than English?**
+The search model works best with English. Other languages may have reduced accuracy for meaning-based search, but keyword search works for any language.
+
+## Tech Details
+
+<details>
+<summary>For developers who want to know what's under the hood</summary>
+
+### Architecture
 
 ```
 .md files → Parser → Embedder → SQLite Store → Hybrid Search
@@ -82,33 +149,24 @@ Add to `.mcp.json` in your project:
 ```
 
 - **Parser** — remark AST, heading-aware chunking, frontmatter extraction
-- **Embedder** — local HuggingFace transformers (all-MiniLM-L6-v2, 384-dim)
-- **Store** — SQLite with WAL mode, FTS5 triggers, atomic transactions
-- **Search** — BM25 + cosine similarity + RRF fusion, normalized to [0,1]
+- **Embedder** — HuggingFace transformers (all-MiniLM-L6-v2, 384-dim, local ONNX)
+- **Store** — SQLite with WAL mode, FTS5 full-text index, atomic transactions
+- **Search** — BM25 + cosine similarity + Reciprocal Rank Fusion, scores normalized to [0,1]
 
-## Engineering
+### Engineering
 
-Built at Distinguished/Fellow level (Level 3):
+- Branded types (`DocumentId`, `ChunkId`, `UnitScore`) — compile-time safety
+- 5 system invariants checked after every write in dev mode
+- Property-based testing with fast-check (1000+ random inputs per property)
+- Performance contracts enforced in CI
+- Graceful degradation — falls back to keyword search if model unavailable
+- 255 tests across 19 test files
 
-- **Branded types** — `DocumentId`, `ChunkId`, `UnitScore` prevent ID mixups at compile time
-- **System invariants** — 5 invariant checks verified after every write in dev mode
-- **Property-based testing** — fast-check with 1000+ random inputs per property
-- **Performance contracts** — CI fails if search > 200ms or indexing < 50 chunks/sec
-- **Graceful degradation** — BM25 fallback when embedding model unavailable
-- **255 tests** across 19 test files
+### Stack
 
-## Tech Stack
+TypeScript 5.7+ | Node.js 22+ | SQLite (better-sqlite3) | HuggingFace transformers | remark | commander | MCP SDK | zod | vitest + fast-check
 
-| Component | Technology |
-|-----------|-----------|
-| Language | TypeScript 5.7+ (strict mode) |
-| Runtime | Node.js 22+ |
-| Storage | SQLite via better-sqlite3 (WAL, FTS5) |
-| Embeddings | @huggingface/transformers (all-MiniLM-L6-v2) |
-| Markdown | remark + remark-frontmatter |
-| CLI | commander |
-| MCP | @modelcontextprotocol/sdk |
-| Testing | vitest + fast-check |
+</details>
 
 ## License
 
