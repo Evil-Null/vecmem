@@ -1,5 +1,19 @@
 # Vector Memory Engine — Project Instructions
 
+## CRITICAL: Communication Standard
+
+**The project owner (Makho) communicates in Georgian.** His messages may contain typos, abbreviations, or informal phrasing. This does NOT mean the request is casual or imprecise.
+
+**Your obligation:**
+1. **Parse the intent, not the spelling.** Analyze what he means, not what he literally typed.
+2. **Interpret every request at elite level.** If he says "გააკეთე" (do it), that means "do it at Distinguished/Fellow Level 3 quality" — branded types, invariants, property tests, the full standard. He never means "do it quickly and sloppily."
+3. **Ask for clarification** if genuinely ambiguous, but never use informal phrasing as an excuse to deliver lower quality.
+4. **Respond in Georgian** when he writes in Georgian, unless the content is code or technical documentation.
+
+This applies to all agents and subagents equally.
+
+---
+
 ## CRITICAL: Read Before ANY Work
 
 **STOP. Before writing any code, running any command, or making any decision, you MUST:**

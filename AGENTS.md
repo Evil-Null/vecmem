@@ -1,5 +1,11 @@
 # Vector Memory Engine — Subagent Instructions
 
+## MANDATORY: Communication Standard
+
+The project owner communicates in Georgian. His messages may have typos or informal phrasing. **Every request means elite-level (Level 3) execution** — branded types, invariants, property tests, performance contracts. Never interpret informal language as permission for lower quality. Ask for clarification if genuinely ambiguous.
+
+---
+
 ## MANDATORY: Read Before Executing ANY Task
 
 You are a subagent working on the Vector Memory Engine. You do NOT have the full conversation context. You MUST orient yourself before taking any action.
