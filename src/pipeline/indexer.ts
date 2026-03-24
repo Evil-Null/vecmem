@@ -182,6 +182,24 @@ function discoverMarkdownFiles(dirPath: string): string[] {
   return results
 }
 
+/** Directories to always skip during discovery */
+const IGNORED_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.hg',
+  '.svn',
+  'dist',
+  'build',
+  'out',
+  '.next',
+  '.nuxt',
+  '.output',
+  '.cache',
+  '.vector',
+  '__pycache__',
+  '.claude',
+])
+
 /** Recursive helper for markdown file discovery */
 function collectMarkdownFiles(dirPath: string, results: string[]): void {
   let entries: string[]
@@ -193,6 +211,14 @@ function collectMarkdownFiles(dirPath: string, results: string[]): void {
   }
 
   for (const entry of entries) {
+    // Skip hidden directories (starting with .) and known ignore patterns
+    if (entry.startsWith('.') && entry !== '.') {
+      continue
+    }
+    if (IGNORED_DIRS.has(entry)) {
+      continue
+    }
+
     const fullPath = join(dirPath, entry)
 
     let stat
