@@ -1,5 +1,12 @@
 # vecmem
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.1.0-green.svg)](package.json)
+[![Platform](https://img.shields.io/badge/platform-Node.js%2022%2B-brightgreen.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7%2B-3178C6.svg)](https://www.typescriptlang.org)
+[![Tests](https://img.shields.io/badge/tests-255%20passing-success.svg)](tests/)
+[![MCP](https://img.shields.io/badge/MCP-7%20tools-purple.svg)](src/mcp/)
+
 > Your notes become AI's memory
 
 A CLI tool and MCP server that transforms `.md` files into a hybrid AI memory system with semantic vector search, full-text search, and instant retrieval.
