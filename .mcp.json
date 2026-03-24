@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "vector-memory": {
+    "vecmem": {
       "command": "node",
       "args": ["/home/makho/Documents/Vector/dist/index.js", "--mcp"],
       "env": {

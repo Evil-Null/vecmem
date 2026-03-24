@@ -54,7 +54,7 @@ function getConfig(opts: { project?: string; storagePath?: string }): VectorConf
 export const program = new Command()
 
 program
-  .name('vector')
+  .name('vecmem')
   .version(VERSION)
   .description('Your notes become AI\'s memory \u2014 hybrid search for markdown files')
   .option('--verbose', 'Show debug-level output', false)
@@ -70,8 +70,8 @@ program
   .description('Initialize project \u2014 auto-discover .md files, create database')
   .addHelpText('after', `
 Examples:
-  $ vector init                    Initialize with defaults
-  $ vector init --project myproj   Initialize with custom project name
+  $ vecmem init                    Initialize with defaults
+  $ vecmem init --project myproj   Initialize with custom project name
 `)
   .action(() => {
     const opts = program.opts<{ verbose: boolean; project?: string; storagePath?: string }>()
@@ -95,9 +95,9 @@ program
   .description('Index markdown files \u2014 incremental, skips unchanged')
   .addHelpText('after', `
 Examples:
-  $ vector index                   Index current directory
-  $ vector index ./docs            Index specific directory
-  $ vector index --verbose         Index with debug output
+  $ vecmem index                   Index current directory
+  $ vecmem index ./docs            Index specific directory
+  $ vecmem index --verbose         Index with debug output
 `)
   .action(async (pathArg: string | undefined) => {
     const opts = program.opts<{ verbose: boolean; project?: string; storagePath?: string }>()
@@ -123,9 +123,9 @@ program
   .option('--all', 'Show all results (not just top 5)')
   .addHelpText('after', `
 Examples:
-  $ vector query "how does auth work?"
-  $ vector query "deployment" --top-k 20
-  $ vector query "OAuth" --all
+  $ vecmem query "how does auth work?"
+  $ vecmem query "deployment" --top-k 20
+  $ vecmem query "OAuth" --all
 `)
   .action(async (text: string, cmdOpts: { topK?: number; all?: boolean }) => {
     const opts = program.opts<{ verbose: boolean; project?: string; storagePath?: string }>()
@@ -154,8 +154,8 @@ program
   .description('Show index stats \u2014 document count, chunks, stale files')
   .addHelpText('after', `
 Examples:
-  $ vector status
-  $ vector status --project myproj
+  $ vecmem status
+  $ vecmem status --project myproj
 `)
   .action(() => {
     const opts = program.opts<{ verbose: boolean; project?: string; storagePath?: string }>()
@@ -179,7 +179,7 @@ program
   .description('Health check \u2014 database, FTS sync, invariants')
   .addHelpText('after', `
 Examples:
-  $ vector doctor
+  $ vecmem doctor
 `)
   .action(() => {
     const opts = program.opts<{ verbose: boolean; project?: string; storagePath?: string }>()
@@ -203,8 +203,8 @@ program
   .description('Remove a document from the index')
   .addHelpText('after', `
 Examples:
-  $ vector remove docs/old-notes.md
-  $ vector remove ./path/to/file.md
+  $ vecmem remove docs/old-notes.md
+  $ vecmem remove ./path/to/file.md
 `)
   .action((filePath: string) => {
     const opts = program.opts<{ verbose: boolean; project?: string; storagePath?: string }>()

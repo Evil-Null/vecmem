@@ -49,7 +49,7 @@ import {
 export function createMcpServer(context: ToolContext): McpServer {
   const server = new McpServer(
     {
-      name: 'vector-memory',
+      name: 'vecmem',
       version: '0.1.0',
     },
     {

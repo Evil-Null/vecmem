@@ -1,5 +1,5 @@
 {
-  "name": "vector-ideafix",
+  "name": "vecmem",
   "version": "0.1.0",
   "description": "Your notes become AI's memory — CLI + MCP hybrid search for markdown",
   "type": "module",
@@ -7,7 +7,7 @@
     "node": ">=22.0.0"
   },
   "bin": {
-    "vector": "./dist/index.js"
+    "vecmem": "./dist/index.js"
   },
   "main": "./dist/index.js",
   "scripts": {
