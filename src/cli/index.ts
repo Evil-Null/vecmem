@@ -59,6 +59,7 @@ export async function runIndex(
   const store = new SqliteStore({
     storagePath: config.storagePath,
     databaseName: config.databaseName,
+    modelName: config.embeddingModel,
   })
 
   const parser = new MarkdownParser({

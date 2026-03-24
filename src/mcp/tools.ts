@@ -15,6 +15,7 @@
  */
 
 import { z } from 'zod'
+import { statSync } from 'node:fs'
 import { indexFile } from '../pipeline/indexer.js'
 import { SearchOrchestrator } from '../pipeline/searcher.js'
 import { VectorError } from '../errors.js'
@@ -39,6 +40,7 @@ export interface ToolContext {
   readonly embedder: Embedder
   readonly logger: Logger
   readonly db: Database.Database
+  readonly dbPath: string
   readonly projectRoot: string
   readonly config: {
     readonly defaultTopK: number
@@ -266,6 +268,8 @@ export function handleRemoveDocument(
 
 /**
  * status — Aggregate index statistics.
+ *
+ * Output fields match spec section 16: { documents, chunks, dbSize, staleFiles }
  */
 export function handleStatus(
   input: { readonly project?: string },
@@ -278,14 +282,37 @@ export function handleStatus(
 
     const docs = ctx.store.listDocuments(projectId)
 
-    const documentCount = docs.length
-    const chunkCount = docs.reduce((sum, d) => sum + d.chunkCount, 0)
-    const totalFileSize = docs.reduce((sum, d) => sum + d.fileSize, 0)
+    const documents = docs.length
+    const chunks = docs.reduce((sum, d) => sum + d.chunkCount, 0)
+
+    // Database file size in bytes
+    let dbSize = 0
+    try {
+      const dbStat = statSync(ctx.dbPath)
+      dbSize = dbStat.size
+    } catch {
+      // Database file not accessible — report 0
+    }
+
+    // Count files modified since last index (stale files)
+    let staleFiles = 0
+    for (const doc of docs) {
+      try {
+        const fileStat = statSync(doc.filePath)
+        if (fileStat.mtimeMs > doc.indexedAt.getTime()) {
+          staleFiles++
+        }
+      } catch {
+        // File not accessible (deleted or moved) — counts as stale
+        staleFiles++
+      }
+    }
 
     const stats = {
-      documentCount,
-      chunkCount,
-      totalFileSize,
+      documents,
+      chunks,
+      dbSize,
+      staleFiles,
       projects: [...new Set(docs.map(d => d.project as string))],
     }
 

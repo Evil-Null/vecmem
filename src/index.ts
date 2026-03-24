@@ -20,6 +20,7 @@ if (isMcpMode) {
   const store = new SqliteStore({
     storagePath: config.storagePath,
     databaseName: config.databaseName,
+    modelName: config.embeddingModel,
   })
   const parser = new MarkdownParser({
     maxChunkTokens: config.maxChunkTokens,
@@ -40,6 +41,7 @@ if (isMcpMode) {
     embedder,
     logger,
     db: store.getDb(),
+    dbPath: store.getDbPath(),
     projectRoot: process.cwd(),
     config: {
       defaultTopK: config.defaultTopK,

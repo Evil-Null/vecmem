@@ -46,6 +46,7 @@ const SCHEMA_VERSION = 1
 interface StoreConfig {
   readonly storagePath: string
   readonly databaseName: string
+  readonly modelName?: string
 }
 
 // ============================================================================
@@ -54,8 +55,10 @@ interface StoreConfig {
 
 export class SqliteStore implements Store {
   private readonly db: Database.Database
+  private readonly modelName: string
 
   constructor(config: StoreConfig) {
+    this.modelName = config.modelName ?? 'all-MiniLM-L6-v2'
     const dbDir = config.storagePath
     if (!existsSync(dbDir)) {
       mkdirSync(dbDir, { recursive: true })
@@ -192,7 +195,7 @@ export class SqliteStore implements Store {
 
         insertEmbedding.run(
           chunkId,
-          'all-MiniLM-L6-v2',
+          this.modelName,
           item.embedding.length,
           embeddingBuffer,
         )

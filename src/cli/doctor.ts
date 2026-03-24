@@ -156,7 +156,7 @@ export function runDoctor(config: VectorConfig, version: string): void {
 
     // Check 6: Stale files
     const docs = store.listDocuments()
-    let staleFiles: string[] = []
+    const staleFiles: string[] = []
     for (const doc of docs) {
       try {
         const fileStat = statSync(doc.filePath)

@@ -265,4 +265,37 @@ describe('Indexing Performance Contracts', () => {
     // 20 files skipped should take well under 2 seconds
     expect(elapsed).toBeLessThan(2000)
   })
+
+  // --------------------------------------------------------------------------
+  // Contract: embedding batch < 5ms/chunk (pipeline overhead with fake embedder)
+  // --------------------------------------------------------------------------
+
+  test('embedding batch overhead < 5ms/chunk with fake embedder (100 chunks)', async () => {
+    // Generate 100 chunks of text
+    const chunkTexts: string[] = []
+    for (let i = 0; i < 100; i++) {
+      chunkTexts.push(
+        `This is chunk number ${i} about topic ${i % 10}. ` +
+        `It contains enough text to be a realistic chunk for embedding. ` +
+        `The content discusses architecture, testing, and performance.`
+      )
+    }
+
+    // Measure embedding batch with fake embedder (random vectors)
+    // This tests pipeline overhead, not actual model speed.
+    const start = performance.now()
+    const results = await embedder.embedBatch(chunkTexts)
+    const elapsed = performance.now() - start
+
+    // Verify results
+    expect(results).toHaveLength(100)
+    for (const vec of results) {
+      expect(vec).toBeInstanceOf(Float32Array)
+      expect(vec.length).toBe(EMBEDDING_DIM)
+    }
+
+    // Contract: 100 chunks should complete in < 500ms (5ms/chunk)
+    // With fake embedder this measures pure JS overhead + array allocation
+    expect(elapsed).toBeLessThan(500)
+  })
 })
