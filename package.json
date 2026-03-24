@@ -1,0 +1,38 @@
+{
+  "name": "vector-ideafix",
+  "version": "0.1.0",
+  "description": "Your notes become AI's memory — CLI + MCP hybrid search for markdown",
+  "type": "module",
+  "engines": { "node": ">=22.0.0" },
+  "bin": { "vector": "./dist/index.js" },
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:props": "vitest run tests/properties",
+    "test:perf": "vitest run tests/performance",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.4.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "better-sqlite3": "^11.0.0",
+    "commander": "^13.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^22.0.0",
+    "fast-check": "^3.15.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "license": "MIT"
+}
