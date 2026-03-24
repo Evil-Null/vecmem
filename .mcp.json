@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "vector-memory": {
+      "command": "node",
+      "args": ["/home/makho/Documents/Vector/dist/index.js", "--mcp"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
