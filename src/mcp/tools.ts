@@ -79,6 +79,11 @@ export const removeDocumentSchema = {
   filePath: z.string().describe('File path of the document to remove'),
 } as const
 
+export const getChunksSchema = {
+  project: z.string().describe('Project name'),
+  filePath: z.string().describe('File path of the document'),
+} as const
+
 export const statusSchema = {
   project: z.string().optional().describe('Filter stats to a specific project'),
 } as const
@@ -169,7 +174,7 @@ export async function handleIndexFiles(
 }
 
 /**
- * get_document — Retrieve a specific document by project and path.
+ * get_document — Retrieve a specific document with its full content (all chunks).
  */
 export function handleGetDocument(
   input: { readonly project: string; readonly filePath: string },
@@ -185,6 +190,8 @@ export function handleGetDocument(
       }
     }
 
+    // Include chunk content so AI clients can actually READ the document
+    const chunks = ctx.store.getChunks(doc.id)
     const serialized = {
       id: doc.id,
       title: doc.title,
@@ -196,7 +203,52 @@ export function handleGetDocument(
       chunkCount: doc.chunkCount,
       fileSize: doc.fileSize,
       indexedAt: doc.indexedAt.toISOString(),
+      chunks: chunks.map(c => ({
+        id: c.id,
+        content: c.content,
+        contentPlain: c.contentPlain,
+        headingPath: c.headingPath,
+        index: c.index,
+        hasCodeBlock: c.hasCodeBlock,
+      })),
     }
+
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify(serialized, null, 2) }],
+    }
+  } catch (err: unknown) {
+    return toErrorResult(err)
+  }
+}
+
+/**
+ * get_chunks — Retrieve all chunks (with full text) for a document.
+ * This is the primary tool for reading document content from the index.
+ */
+export function handleGetChunks(
+  input: { readonly project: string; readonly filePath: string },
+  ctx: ToolContext,
+): CallToolResult {
+  try {
+    const projectId = createProjectId(input.project)
+    const doc = ctx.store.getDocument(projectId, input.filePath)
+
+    if (doc === null) {
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Document not found', filePath: input.filePath }) }],
+        isError: true,
+      }
+    }
+
+    const chunks = ctx.store.getChunks(doc.id)
+    const serialized = chunks.map(c => ({
+      id: c.id,
+      content: c.content,
+      contentPlain: c.contentPlain,
+      headingPath: c.headingPath,
+      index: c.index,
+      hasCodeBlock: c.hasCodeBlock,
+    }))
 
     return {
       content: [{ type: 'text' as const, text: JSON.stringify(serialized, null, 2) }],

@@ -4,10 +4,11 @@
  * Exposes Vector's core functionality to AI clients (Claude CLI, Cursor, Copilot)
  * via stdio transport using the Model Context Protocol.
  *
- * 6 tools registered:
+ * 7 tools registered:
  * - search_memory: hybrid BM25 + vector search
  * - index_files: index markdown files into memory
- * - get_document: retrieve a specific document
+ * - get_document: retrieve a document with full content
+ * - get_chunks: retrieve all chunks for a document
  * - list_documents: list all indexed documents
  * - remove_document: remove a document from the index
  * - status: aggregate index statistics
@@ -21,12 +22,14 @@ import {
   searchMemorySchema,
   indexFilesSchema,
   getDocumentSchema,
+  getChunksSchema,
   listDocumentsSchema,
   removeDocumentSchema,
   statusSchema,
   handleSearchMemory,
   handleIndexFiles,
   handleGetDocument,
+  handleGetChunks,
   handleListDocuments,
   handleRemoveDocument,
   handleStatus,
@@ -38,7 +41,7 @@ import {
 // ============================================================================
 
 /**
- * Create an MCP server with all 6 tools registered.
+ * Create an MCP server with all 7 tools registered.
  *
  * @param context - Dependencies (store, parser, embedder, logger, db, config)
  * @returns McpServer instance ready to connect to a transport
@@ -85,6 +88,15 @@ export function createMcpServer(context: ToolContext): McpServer {
       inputSchema: getDocumentSchema,
     },
     (args) => handleGetDocument(args, context),
+  )
+
+  server.registerTool(
+    'get_chunks',
+    {
+      description: 'Get all chunks (full text content) for a document — use this to read document content',
+      inputSchema: getChunksSchema,
+    },
+    (args) => handleGetChunks(args, context),
   )
 
   server.registerTool(
