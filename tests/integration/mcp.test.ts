@@ -130,6 +130,7 @@ describe('MCP Tools Integration', () => {
       embedder,
       logger,
       db,
+      dbPath: join(dbDir, 'test.db'),
       projectRoot: tempDir,
       config: {
         defaultTopK: 10,
@@ -446,14 +447,16 @@ More content in a second section for additional chunks.
 
     expect(result.isError).toBeUndefined()
     const parsed = parseToolResultText(result) as {
-      documentCount: number
-      chunkCount: number
-      totalFileSize: number
+      documents: number
+      chunks: number
+      dbSize: number
+      staleFiles: number
       projects: string[]
     }
-    expect(parsed.documentCount).toBe(2)
-    expect(parsed.chunkCount).toBeGreaterThan(0)
-    expect(parsed.totalFileSize).toBeGreaterThan(0)
+    expect(parsed.documents).toBe(2)
+    expect(parsed.chunks).toBeGreaterThan(0)
+    expect(parsed.dbSize).toBeGreaterThan(0)
+    expect(typeof parsed.staleFiles).toBe('number')
     expect(Array.isArray(parsed.projects)).toBe(true)
     expect(parsed.projects).toContain('test-project')
   })
@@ -463,11 +466,13 @@ More content in a second section for additional chunks.
 
     expect(result.isError).toBeUndefined()
     const parsed = parseToolResultText(result) as {
-      documentCount: number
-      chunkCount: number
+      documents: number
+      chunks: number
+      dbSize: number
+      staleFiles: number
     }
-    expect(parsed.documentCount).toBe(0)
-    expect(parsed.chunkCount).toBe(0)
+    expect(parsed.documents).toBe(0)
+    expect(parsed.chunks).toBe(0)
   })
 
   it('status filters by project', async () => {
@@ -480,13 +485,13 @@ Content for status project filter test.
 
     // Filter by correct project
     const result = handleStatus({ project: 'test-project' }, ctx)
-    const parsed = parseToolResultText(result) as { documentCount: number }
-    expect(parsed.documentCount).toBe(1)
+    const parsed = parseToolResultText(result) as { documents: number }
+    expect(parsed.documents).toBe(1)
 
     // Filter by wrong project
     const resultEmpty = handleStatus({ project: 'other-project' }, ctx)
-    const parsedEmpty = parseToolResultText(resultEmpty) as { documentCount: number }
-    expect(parsedEmpty.documentCount).toBe(0)
+    const parsedEmpty = parseToolResultText(resultEmpty) as { documents: number }
+    expect(parsedEmpty.documents).toBe(0)
   })
 
   // --------------------------------------------------------------------------
@@ -514,8 +519,8 @@ The cluster manages pod scheduling and service discovery.
 
     // 3. Status
     const statusResult = handleStatus({}, ctx)
-    const statusParsed = parseToolResultText(statusResult) as { documentCount: number }
-    expect(statusParsed.documentCount).toBe(1)
+    const statusParsed = parseToolResultText(statusResult) as { documents: number }
+    expect(statusParsed.documents).toBe(1)
 
     // 4. Remove
     const removeResult = handleRemoveDocument({ project: 'test-project', filePath }, ctx)
@@ -524,8 +529,8 @@ The cluster manages pod scheduling and service discovery.
 
     // 5. Verify gone
     const afterStatus = handleStatus({}, ctx)
-    const afterParsed = parseToolResultText(afterStatus) as { documentCount: number }
-    expect(afterParsed.documentCount).toBe(0)
+    const afterParsed = parseToolResultText(afterStatus) as { documents: number }
+    expect(afterParsed.documents).toBe(0)
 
     // 6. Search returns no results for removed content
     const afterSearch = await handleSearchMemory({ query: 'Kubernetes deployment' }, ctx)

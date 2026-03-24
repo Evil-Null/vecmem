@@ -4,6 +4,10 @@
  * Property-based tests using fast-check to prove store properties
  * hold for all valid inputs.
  *
+ * numRuns is set to 500 (not 10K) because each run creates a real SQLite database
+ * with transactions, inserts, and deletes. Higher run counts would make the test
+ * suite impractically slow without providing proportionally more coverage.
+ *
  * Properties tested:
  * 1. Cascade deletion: delete document -> getChunks returns empty
  * 2. Idempotent save: save same data twice -> same document count, same chunk count
@@ -114,7 +118,7 @@ describe('Store Properties', () => {
           return chunks.length === 0
         },
       ),
-      { numRuns: 200 },
+      { numRuns: 500 },
     )
   })
 
@@ -144,7 +148,7 @@ describe('Store Properties', () => {
           return chunks.length === chunkCount
         },
       ),
-      { numRuns: 200 },
+      { numRuns: 500 },
     )
   })
 
