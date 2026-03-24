@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "description": "Your notes become AI's memory — CLI + MCP hybrid search for markdown",
   "type": "module",
-  "engines": { "node": ">=22.0.0" },
-  "bin": { "vector": "./dist/index.js" },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "bin": {
+    "vector": "./dist/index.js"
+  },
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -25,6 +29,7 @@
     "remark-frontmatter": "^5.0.0",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.0",
+    "yaml": "^2.8.3",
     "zod": "^3.25.0"
   },
   "devDependencies": {
