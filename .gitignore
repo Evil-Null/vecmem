@@ -29,6 +29,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # Reference code (not part of this project)
 coldcontext-main/
 

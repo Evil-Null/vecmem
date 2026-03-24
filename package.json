@@ -39,5 +39,27 @@
     "typescript": "^5.7.0",
     "vitest": "^2.0.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "author": "Evil-Null",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Evil-Null/vecmem.git"
+  },
+  "homepage": "https://github.com/Evil-Null/vecmem",
+  "bugs": {
+    "url": "https://github.com/Evil-Null/vecmem/issues"
+  },
+  "keywords": [
+    "cli",
+    "mcp",
+    "vector-search",
+    "embeddings",
+    "sqlite",
+    "markdown",
+    "ai-memory",
+    "semantic-search",
+    "bm25",
+    "rag",
+    "local-first"
+  ]
 }
