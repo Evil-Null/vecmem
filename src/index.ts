@@ -38,6 +38,13 @@ if (isMcpMode) {
   await startMcpServer({
     store,
     parser,
+    parserFactory: (project: string) => new MarkdownParser({
+      maxChunkTokens: config.maxChunkTokens,
+      minChunkTokens: config.minChunkTokens,
+      chunkOverlapTokens: config.chunkOverlapTokens,
+      headingSplitDepth: config.headingSplitDepth,
+      project,
+    }),
     embedder,
     logger,
     db: store.getDb(),

@@ -1,17 +1,19 @@
 /**
  * Vector Memory Engine — MCP Server Integration Tests
  *
- * Tests all 6 MCP tools by directly calling handler functions.
+ * Tests all 7 MCP tools by directly calling handler functions.
  * Uses a real SQLite store, real parser, and fake embedder (no model download).
  *
  * Coverage:
- * - All 6 tools are callable and return valid MCP CallToolResult
+ * - All 7 tools are callable and return valid MCP CallToolResult
  * - search_memory returns array of results
  * - index_files indexes files and returns per-file results
  * - get_document retrieves a specific document
+ * - get_chunks retrieves chunks for a document
  * - list_documents returns document list
  * - remove_document removes and returns status
  * - status returns aggregate stats (document count, chunk count, etc.)
+ * - Project isolation: tools default to server project when client omits param
  * - Error handling: VectorError → structured MCP error response
  */
 
@@ -127,6 +129,7 @@ describe('MCP Tools Integration', () => {
     ctx = {
       store,
       parser,
+      parserFactory: (project: string) => new MarkdownParser({ project }),
       embedder,
       logger,
       db,
@@ -492,6 +495,145 @@ Content for status project filter test.
     const resultEmpty = handleStatus({ project: 'other-project' }, ctx)
     const parsedEmpty = parseToolResultText(resultEmpty) as { documents: number }
     expect(parsedEmpty.documents).toBe(0)
+  })
+
+  // --------------------------------------------------------------------------
+  // Project isolation — default project fallback
+  // --------------------------------------------------------------------------
+
+  describe('project isolation', () => {
+    it('search_memory without project param returns only server default project results', async () => {
+      const filePath = writeMdFile(tempDir, 'default-proj.md', `# Default Project Doc
+
+## Kubernetes Deployment
+
+Deploy applications using Kubernetes with helm charts.
+`)
+      await handleIndexFiles({ paths: [filePath] }, ctx)
+
+      // Manually insert a document under a different project
+      const otherParser = new MarkdownParser({ project: 'other-project' })
+      const otherFile = writeMdFile(tempDir, 'other-proj.md', `# Other Project Doc
+
+## Kubernetes Scaling
+
+Scale applications horizontally with HPA.
+`)
+      const { document: otherDoc, chunks: otherChunks } = otherParser.parse(otherFile)
+      const otherEmbeddings = await embedder.embedBatch(otherChunks.map(c => c.contentPlain))
+      const otherItems = otherChunks.map((chunk, i) => ({ chunk, embedding: otherEmbeddings[i]! }))
+      store.save(otherDoc, otherItems)
+
+      // Search WITHOUT project param — should only return test-project results
+      const result = await handleSearchMemory({ query: 'Kubernetes' }, ctx)
+      const parsed = parseToolResultText(result) as Array<{ documentPath: string }>
+
+      expect(parsed.length).toBeGreaterThan(0)
+      for (const r of parsed) {
+        expect(r.documentPath).not.toBe(otherFile)
+      }
+    })
+
+    it('list_documents without project param returns only server default project docs', async () => {
+      const filePath = writeMdFile(tempDir, 'list-default.md', `# List Default
+
+Content for list test.
+`)
+      await handleIndexFiles({ paths: [filePath] }, ctx)
+
+      // Insert under other project
+      const otherParser = new MarkdownParser({ project: 'other-project' })
+      const otherFile = writeMdFile(tempDir, 'list-other.md', `# List Other
+
+Content for other project.
+`)
+      const { document: otherDoc, chunks: otherChunks } = otherParser.parse(otherFile)
+      const otherEmbeddings = await embedder.embedBatch(otherChunks.map(c => c.contentPlain))
+      store.save(otherDoc, otherChunks.map((chunk, i) => ({ chunk, embedding: otherEmbeddings[i]! })))
+
+      // list_documents WITHOUT project param
+      const result = handleListDocuments({}, ctx)
+      const parsed = parseToolResultText(result) as Array<{ project: string }>
+
+      expect(parsed.length).toBe(1)
+      expect(parsed[0]!.project).toBe('test-project')
+    })
+
+    it('status without project param returns only server default project stats', async () => {
+      const filePath = writeMdFile(tempDir, 'status-default.md', `# Status Default
+
+Content for status test.
+`)
+      await handleIndexFiles({ paths: [filePath] }, ctx)
+
+      // Insert under other project
+      const otherParser = new MarkdownParser({ project: 'other-project' })
+      const otherFile = writeMdFile(tempDir, 'status-other.md', `# Status Other
+
+Content for other project status.
+`)
+      const { document: otherDoc, chunks: otherChunks } = otherParser.parse(otherFile)
+      const otherEmbeddings = await embedder.embedBatch(otherChunks.map(c => c.contentPlain))
+      store.save(otherDoc, otherChunks.map((chunk, i) => ({ chunk, embedding: otherEmbeddings[i]! })))
+
+      // status WITHOUT project param
+      const result = handleStatus({}, ctx)
+      const parsed = parseToolResultText(result) as { documents: number; projects: string[] }
+
+      expect(parsed.documents).toBe(1)
+      expect(parsed.projects).toEqual(['test-project'])
+    })
+
+    it('index_files respects explicit project override', async () => {
+      const filePath = writeMdFile(tempDir, 'custom-proj.md', `# Custom Project
+
+Content indexed under custom project name.
+`)
+
+      // Index with explicit project override
+      await handleIndexFiles({ paths: [filePath], project: 'custom-project' }, ctx)
+
+      // Should NOT appear under default project
+      const defaultDocs = handleListDocuments({ project: 'test-project' }, ctx)
+      const defaultParsed = parseToolResultText(defaultDocs) as Array<{ filePath: string }>
+      const foundInDefault = defaultParsed.some(d => d.filePath === filePath)
+      expect(foundInDefault).toBe(false)
+
+      // Should appear under custom project
+      const customDocs = handleListDocuments({ project: 'custom-project' }, ctx)
+      const customParsed = parseToolResultText(customDocs) as Array<{ filePath: string }>
+      const foundInCustom = customParsed.some(d => d.filePath === filePath)
+      expect(foundInCustom).toBe(true)
+    })
+
+    it('search_memory with explicit project overrides server default', async () => {
+      const filePath = writeMdFile(tempDir, 'override-default.md', `# Override Default
+
+Content about databases and indexing.
+`)
+      await handleIndexFiles({ paths: [filePath] }, ctx)
+
+      // Index under other project
+      const otherParser = new MarkdownParser({ project: 'other-project' })
+      const otherFile = writeMdFile(tempDir, 'override-other.md', `# Override Other
+
+Content about databases and queries.
+`)
+      const { document: otherDoc, chunks: otherChunks } = otherParser.parse(otherFile)
+      const otherEmbeddings = await embedder.embedBatch(otherChunks.map(c => c.contentPlain))
+      store.save(otherDoc, otherChunks.map((chunk, i) => ({ chunk, embedding: otherEmbeddings[i]! })))
+
+      // Search explicitly in other-project
+      const result = await handleSearchMemory(
+        { query: 'databases', project: 'other-project' },
+        ctx,
+      )
+      const parsed = parseToolResultText(result) as Array<{ documentPath: string }>
+
+      for (const r of parsed) {
+        expect(r.documentPath).not.toBe(filePath)
+      }
+    })
   })
 
   // --------------------------------------------------------------------------
