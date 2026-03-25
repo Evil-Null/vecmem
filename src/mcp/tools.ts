@@ -1,10 +1,11 @@
 /**
  * Vector Memory Engine — MCP Tool Definitions
  *
- * 6 tools exposing Vector's core functionality to AI clients via MCP:
+ * 7 tools exposing Vector's core functionality to AI clients via MCP:
  * - search_memory: hybrid BM25 + vector search
  * - index_files: index markdown files into memory
  * - get_document: retrieve a specific document
+ * - get_chunks: retrieve all chunks for a document
  * - list_documents: list all indexed documents
  * - remove_document: remove a document from the index
  * - status: aggregate index statistics
@@ -12,6 +13,9 @@
  * Tool schemas defined in Zod — auto-converted to JSON Schema by the MCP SDK.
  * Each handler maps directly to pipeline/store functions.
  * Errors are structured with VectorError.code for machine-readable responses.
+ *
+ * Project isolation: all tools with optional `project` params default to
+ * ctx.config.project (the server's configured project) when client omits it.
  */
 
 import { z } from 'zod'
@@ -37,6 +41,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 export interface ToolContext {
   readonly store: Store
   readonly parser: Parser
+  readonly parserFactory: (project: string) => Parser
   readonly embedder: Embedder
   readonly logger: Logger
   readonly db: Database.Database
@@ -57,12 +62,12 @@ export interface ToolContext {
 export const searchMemorySchema = {
   query: z.string().describe('Search query text'),
   topK: z.number().optional().describe('Maximum number of results to return'),
-  project: z.string().optional().describe('Filter results to a specific project'),
+  project: z.string().optional().describe('Project to search (defaults to server project)'),
 } as const
 
 export const indexFilesSchema = {
   paths: z.array(z.string()).describe('Array of file paths to index'),
-  project: z.string().optional().describe('Project name (defaults to current project)'),
+  project: z.string().optional().describe('Project to index into (defaults to server project)'),
 } as const
 
 export const getDocumentSchema = {
@@ -71,7 +76,7 @@ export const getDocumentSchema = {
 } as const
 
 export const listDocumentsSchema = {
-  project: z.string().optional().describe('Filter to a specific project'),
+  project: z.string().optional().describe('Project to list (defaults to server project)'),
 } as const
 
 export const removeDocumentSchema = {
@@ -85,7 +90,7 @@ export const getChunksSchema = {
 } as const
 
 export const statusSchema = {
-  project: z.string().optional().describe('Filter stats to a specific project'),
+  project: z.string().optional().describe('Project to report on (defaults to server project)'),
 } as const
 
 // ============================================================================
@@ -106,9 +111,7 @@ export async function handleSearchMemory(
       minScore: ctx.config.minScore,
     })
 
-    const projectId = input.project !== undefined
-      ? createProjectId(input.project)
-      : undefined
+    const projectId = createProjectId(input.project ?? ctx.config.project)
 
     const results = await searcher.query(input.query, {
       topK: input.topK,
@@ -141,13 +144,18 @@ export async function handleIndexFiles(
   ctx: ToolContext,
 ): Promise<CallToolResult> {
   try {
+    // Use project-specific parser if client overrides project
+    const activeParser = input.project !== undefined
+      ? ctx.parserFactory(input.project)
+      : ctx.parser
+
     const results: Array<{ path: string; status: string; chunks?: number; reason?: string }> = []
 
     for (const filePath of input.paths) {
       try {
         const result = await indexFile(
           filePath,
-          ctx.parser,
+          activeParser,
           ctx.embedder,
           ctx.store,
           ctx.logger,
@@ -266,9 +274,7 @@ export function handleListDocuments(
   ctx: ToolContext,
 ): CallToolResult {
   try {
-    const projectId = input.project !== undefined
-      ? createProjectId(input.project)
-      : undefined
+    const projectId = createProjectId(input.project ?? ctx.config.project)
 
     const docs = ctx.store.listDocuments(projectId)
 
@@ -328,9 +334,7 @@ export function handleStatus(
   ctx: ToolContext,
 ): CallToolResult {
   try {
-    const projectId = input.project !== undefined
-      ? createProjectId(input.project)
-      : undefined
+    const projectId = createProjectId(input.project ?? ctx.config.project)
 
     const docs = ctx.store.listDocuments(projectId)
 
